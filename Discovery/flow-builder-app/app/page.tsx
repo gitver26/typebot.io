@@ -22,11 +22,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden">
-      {/* Visual Overlays */}
-      <div className="retro-grid" />
-      <div className="crt-overlay" />
-
+    <div className="min-h-screen flex flex-col relative">
       {/* Header */}
       <header className="flex items-center justify-between px-6 py-4 border-b-2 border-[#00f3ff] bg-[#0d0221]/80 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-2">

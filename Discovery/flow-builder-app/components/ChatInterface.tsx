@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Copy, CheckCheck, Sparkles, MessageCircle, Rocket, ExternalLink, CheckCircle, ArrowRight } from 'lucide-react';
-import { parseTypebotJSON, type TypebotJSON } from '@/lib/jsonValidation';
+import { Send, Loader2, Copy, CheckCheck, MessageCircle, Rocket, ExternalLink, CheckCircle } from 'lucide-react';
+import { parseTypebotJSON } from '@/lib/jsonValidation';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -75,10 +75,6 @@ export default function ChatInterface() {
         } finally {
             setIsLoading(false);
         }
-    };
-
-    const handleContinue = () => {
-        inputRef.current?.focus();
     };
 
     const handleCreateBot = async () => {
@@ -163,62 +159,76 @@ export default function ChatInterface() {
     const lastMessageIsAssistant = messages.length > 0 && messages[messages.length - 1].role === 'assistant';
 
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="min-h-screen flex flex-col relative">
             {/* Header */}
-            <header className="flex items-center justify-between px-4 md:px-6 py-4 bg-white/80 backdrop-blur-md sticky top-0 z-10">
+            <header className="flex items-center justify-between px-4 md:px-6 py-4 border-b-2 border-[#00f3ff] bg-[#0d0221]/80 backdrop-blur-sm sticky top-0 z-10">
                 <div className="flex items-center gap-2">
-                    {/* No branding */}
+                    <h2 className="text-2xl font-bold tracking-widest text-[#00f3ff] glow">FLOW OS CORE v2.1</h2>
                 </div>
             </header>
 
             {/* Success Toast */}
             {createdBot && (
-                <div className="fixed top-20 right-6 z-50 success-toast p-5 max-w-sm animate-fade-in">
-                    <div className="flex items-start gap-3">
-                        <CheckCircle className="w-6 h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                <div className="fixed top-8 right-8 z-50 bg-[#0d0221] border-2 border-[#00f3ff] p-8 max-w-sm shadow-[0_0_20px_#00f3ff] animate-fade-in group hover:shadow-[0_0_40px_#00f3ff] transition-all">
+                    <div className="flex items-start gap-5">
+                        <div className="bg-[#0d0221] p-2 border-2 border-[#00f3ff]">
+                            <CheckCircle className="w-8 h-8 text-[#00f3ff] flex-shrink-0" />
+                        </div>
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-slate-900">Bot created successfully!</p>
-                            <p className="text-sm text-slate-500 mt-1 truncate">ID: {createdBot.typebotId}</p>
+                            <p className="font-bold text-[#00f3ff] uppercase tracking-tighter text-2xl italic leading-none mb-1 glow">Success!</p>
+                            <p className="font-bold text-[#ff00ff] uppercase tracking-widest text-sm mb-4 text-magenta">Bot is Live</p>
+                            <div className="bg-black/50 p-3 border border-[#39ff14] mb-6">
+                                <p className="text-[10px] text-[#39ff14] font-bold uppercase tracking-[0.2em] mb-1 opacity-70">Typebot ID</p>
+                                <p className="text-xs text-[#39ff14] font-bold truncate">{createdBot?.typebotId}</p>
+                            </div>
                             <a
-                                href={createdBot.typebotUrl}
+                                href={createdBot?.typebotUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="inline-flex items-center gap-1.5 text-sm font-medium text-[#0084d1] mt-3 bg-[#0084d1]/10 px-3 py-1.5 rounded-lg hover:bg-[#0084d1]/20 transition-colors"
+                                className="btn-primary w-full"
                             >
-                                Open in Editor <ExternalLink className="w-3.5 h-3.5" />
+                                Open Editor <ExternalLink className="w-4 h-4" />
                             </a>
                         </div>
-                        <button onClick={() => setCreatedBot(null)} className="text-slate-400 hover:text-slate-600 p-1">&times;</button>
+                        <button
+                            onClick={() => setCreatedBot(null)}
+                            className="text-[#00f3ff] hover:text-[#ff00ff] font-bold text-xl transition-colors"
+                        >
+                            ✕
+                        </button>
                     </div>
                 </div>
             )}
 
             {/* Main */}
-            <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-12 md:px-32 lg:px-48 py-16 md:py-24">
+            <main className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-12 md:px-32 lg:px-48 py-16 md:py-32">
                 {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-8 mb-12">
+                <div className="flex-1 overflow-y-auto space-y-12 mb-20">
                     {!hasMessages && (
                         <div className="h-full min-h-[50vh] flex flex-col items-center justify-center text-center px-4">
-                            <div className="w-20 h-20 rounded-3xl bg-blue-50 border border-blue-100 flex items-center justify-center mb-12 shadow-sm">
-                                <MessageCircle className="w-10 h-10 text-[#0084d1]" />
+                            <div className="w-24 h-24 bg-[#0d0221] border-2 border-[#00f3ff] shadow-[0_0_15px_#00f3ff] flex items-center justify-center mb-12">
+                                <MessageCircle className="w-12 h-12 text-[#00f3ff]" />
                             </div>
-                            <h2 className="text-3xl font-bold text-slate-900 mb-4">What would you like to build?</h2>
-                            <p className="text-slate-500 max-w-sm">Describe your chatbot's goal and I'll generate the Typebot flow for you.</p>
+                            <h2 className="text-4xl font-bold text-[#00f3ff] mb-6 uppercase italic tracking-widest glow">ORCHESTRATION START</h2>
+                            <p className="text-[#39ff14] text-terminal max-w-sm font-bold text-lg uppercase tracking-widest">Awaiting system objective instructions...</p>
                         </div>
                     )}
 
                     {messages.map((message, index) => (
                         <div key={index} className={`flex flex-col animate-fade-in ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                            <div className={`${message.role === 'user' ? 'message-user' : 'message-assistant'} max-w-[90%] md:max-w-[80%] px-5 py-3.5 text-[15px]`}>
-                                <p className="leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                            <div className={`max-w-[90%] md:max-w-[75%] px-6 py-4 border-2 ${message.role === 'user'
+                                ? 'bg-black/80 text-[#ff00ff] border-[#ff00ff] shadow-[0_0_15px_#ff00ff]'
+                                : 'card'
+                                }`}>
+                                <p className={`leading-relaxed whitespace-pre-wrap font-bold text-xl ${message.role === 'user' ? 'text-magenta' : ''}`}>{message.content}</p>
                             </div>
-                            <div className={`flex items-center gap-2 mt-2 px-1 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                                <span className="text-xs text-[#71717a]">
-                                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <div className={`flex items-center gap-3 mt-3 px-1 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                <span className={`text-sm font-bold uppercase tracking-widest ${message.role === 'user' ? 'text-magenta' : 'text-[#00f3ff]'}`}>
+                                    [{message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]
                                 </span>
                                 {message.role === 'assistant' && (
-                                    <button onClick={() => copyToClipboard(message.content, index)} className="text-[#71717a] hover:text-[#a1a1aa] transition-colors">
-                                        {copiedIndex === index ? <CheckCheck className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                                    <button onClick={() => copyToClipboard(message.content, index)} className="text-[#00f3ff] hover:text-[#ff00ff] transition-all">
+                                        {copiedIndex === index ? <CheckCheck className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                                     </button>
                                 )}
                             </div>
@@ -226,22 +236,22 @@ export default function ChatInterface() {
                     ))}
 
                     {isLoading && (
-                        <div className="flex items-center gap-3 px-5 py-3 card w-fit animate-fade-in">
-                            <Loader2 className="w-4 h-4 animate-spin text-[#a855f7]" />
-                            <span className="text-sm text-[#a1a1aa]">Thinking...</span>
+                        <div className="flex items-center gap-4 px-6 py-4 border-2 border-[#39ff14] shadow-[0_0_15px_#39ff14] bg-black/80 w-fit animate-fade-in">
+                            <Loader2 className="w-5 h-5 animate-spin text-[#39ff14]" />
+                            <span className="font-bold uppercase tracking-widest text-[#39ff14] glow">Processing Neural Query...</span>
                         </div>
                     )}
 
                     {isCreating && (
-                        <div className="flex items-center gap-3 px-5 py-3 card w-fit animate-fade-in" style={{ borderColor: 'rgba(168, 85, 247, 0.3)' }}>
-                            <Rocket className="w-4 h-4 text-[#a855f7] animate-pulse" />
-                            <span className="text-sm text-[#a855f7]">Creating your bot...</span>
+                        <div className="flex items-center gap-4 px-6 py-4 border-2 border-[#ff00ff] shadow-[0_0_15px_#ff00ff] bg-black/80 w-fit animate-fade-in">
+                            <Rocket className="w-5 h-5 animate-pulse text-[#ff00ff]" />
+                            <span className="font-bold uppercase tracking-widest text-[#ff00ff] glow">Initializing Bot Genesis...</span>
                         </div>
                     )}
 
                     {error && (
-                        <div className="error-toast px-5 py-3 animate-fade-in">
-                            <p className="text-sm text-red-400">{error}</p>
+                        <div className="bg-red-500/20 border-2 border-red-500 p-6 shadow-[0_0_20px_red] animate-fade-in">
+                            <p className="font-bold uppercase text-red-500 tracking-widest glow">SYSTEM ERROR: {error}</p>
                         </div>
                     )}
 
@@ -249,40 +259,36 @@ export default function ChatInterface() {
                 </div>
 
                 {/* Input Area with Maximum Spacing */}
-                <div className="space-y-12 mb-32 px-12 md:px-16">
-                    <div className="card p-8 shadow-2xl shadow-blue-500/10 focus-within:shadow-blue-500/20 transition-all border-slate-200 focus-within:border-[#0084d1] bg-white">
+                <div className="space-y-12 mb-48 px-4 md:px-0">
+                    <div className="card !p-6 shadow-[0_0_30px_rgba(0,243,255,0.2)]">
                         <textarea
                             ref={inputRef}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={handleKeyDown}
-                            placeholder="e.g. A real estate bot that captures leads..."
-                            className="w-full bg-transparent border-none text-[16px] p-4 resize-none focus:outline-none placeholder:text-slate-400"
+                            placeholder="INPUT COMMAND..."
+                            className="w-full"
                             rows={messages.length > 0 ? 2 : 3}
                             disabled={isLoading || isCreating}
                         />
-                        <div className="flex items-center justify-between px-2 pb-2">
-                            <span className="text-xs text-[#71717a]">Press Enter to send</span>
+                        <div className="flex items-center justify-between mt-6">
+                            <span className="text-sm font-bold uppercase tracking-[0.3em] text-[#39ff14] glow">Awaiting Input_</span>
                             <button
-                                onClick={handleSend}
+                                onClick={() => handleSend()}
                                 disabled={!input.trim() || isLoading || isCreating}
-                                className="btn-primary flex items-center gap-2 py-2 px-4"
+                                className="btn-primary"
                             >
-                                <Send className="w-4 h-4" />
-                                Send
+                                <Send className="w-5 h-5" />
+                                EXECUTE
                             </button>
                         </div>
                     </div>
 
                     {lastMessageIsAssistant && !isLoading && !isCreating && (
-                        <div className="flex gap-3 justify-end">
-                            <button onClick={handleContinue} className="btn-secondary flex items-center gap-2">
-                                <MessageCircle className="w-4 h-4" />
-                                Continue
-                            </button>
-                            <button onClick={handleCreateBot} className="btn-primary flex items-center gap-2">
-                                <Rocket className="w-4 h-4" />
-                                Create Bot
+                        <div className="flex gap-6 justify-end">
+                            <button onClick={handleCreateBot} className="btn-primary btn-magenta !px-12">
+                                <Rocket className="w-6 h-6" />
+                                GENERATE TYPEBOT SEQUENCE
                             </button>
                         </div>
                     )}
@@ -290,8 +296,8 @@ export default function ChatInterface() {
             </main>
 
             {/* Footer */}
-            <footer className="py-8 text-center text-slate-400 text-sm">
-                Build by Terence
+            <footer className="py-8 text-center text-[#ff00ff] text-xl tracking-widest uppercase glow">
+                [ NEURAL SYSTEM BY TERENCE ]
             </footer>
         </div>
     );

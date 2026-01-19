@@ -20,7 +20,11 @@ export default function RootLayout({
 }) {
     return (
         <html lang="en" className={vt323.className}>
-            <body>{children}</body>
+            <body>
+                <div className="retro-grid" />
+                <div className="crt-overlay" />
+                {children}
+            </body>
         </html>
     )
 }
