@@ -1,0 +1,102 @@
+{
+    "workspaceId": "cm0yoasvt001fq8mubqsy1i2b",
+    "typebot": {
+        "name": "Test Flow - Simple Contact Form",
+        "groups": [
+            {
+                "id": "group_1",
+                "title": "Welcome",
+                "graphCoordinates": {
+                    "x": 0,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_1",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "Welcome! Let's collect your information."
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "outgoingEdgeId": "edge_1"
+                    }
+                ]
+            },
+            {
+                "id": "group_2",
+                "title": "Collect Name",
+                "graphCoordinates": {
+                    "x": 400,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_2",
+                        "type": "text input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "Your name..."
+                            }
+                        },
+                        "outgoingEdgeId": "edge_2"
+                    }
+                ]
+            },
+            {
+                "id": "group_3",
+                "title": "Thank You",
+                "graphCoordinates": {
+                    "x": 800,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_3",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "Thank you for your submission!"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ],
+        "edges": [
+            {
+                "id": "edge_1",
+                "from": {
+                    "blockId": "block_1"
+                },
+                "to": {
+                    "groupId": "group_2"
+                }
+            },
+            {
+                "id": "edge_2",
+                "from": {
+                    "blockId": "block_2"
+                },
+                "to": {
+                    "groupId": "group_3"
+                }
+            }
+        ],
+        "variables": []
+    }
+}

@@ -1,0 +1,1531 @@
+version: 0.1
+name: typebot-flow-agent
+description: >
+  Agent that designs Typebot flows by generating TypebotV6 JSON and calling
+  the Typebot createTypebot API.
+
+typebot_core:
+  schema_version: "v6"
+
+  objects:
+    TypebotV6:
+      description: Full Typebot flow schema (internal canonical representation).
+      source: packages/typebot/src/schemas/typebot.ts
+      fields:
+        version:
+          type: enum
+          description: One of typebotV6Versions; agent targets latest.
+        id:
+          type: string
+          description: Unique bot identifier (set by backend on create).
+        name:
+          type: string
+        workspaceId:
+          type: string
+        groups:
+          type: GroupV6[]
+          description: Flow is organized into groups containing ordered blocks.
+        events:
+          type: Event[]
+          description: Start and other draggable events used as entry points.
+        edges:
+          type: Edge[]
+          description: Graph connections between events/blocks and groups/blocks.
+        variables:
+          type: Variable[]
+        theme:
+          type: Theme
+        settings:
+          type: Settings
+        selectedThemeTemplateId:
+          type: string | null
+        folderId:
+          type: string | null
+        publicId:
+          type: string | null
+        customDomain:
+          type: string | null
+        resultsTablePreferences:
+          type: ResultsTablePreferences | null
+          description: User preferences for the Results table UI (columns and widths).
+
+    Result:
+      description: Persisted submission row stored in the database.
+      source: packages/results/src/schemas/results.ts::resultSchema
+      fields:
+        id:
+          type: string
+          description: Stable identifier for this submission (Result row).
+        createdAt:
+          type: Date
+        typebotId:
+          type: string
+        variables:
+          type: VariableWithValue[]
+          description: >
+            Non-session variables with values at the time of persistence. Drives
+            variable-based columns in the Results table.
+        isCompleted:
+          type: boolean
+        hasStarted:
+          type: boolean | null
+        isArchived:
+          type: boolean | null
+        lastChatSessionId:
+          type: string | null
+
+    ResultWithAnswers:
+      description: Result row enriched with per-block Answers.
+      source: packages/results/src/schemas/results.ts::resultWithAnswersSchema
+      fields:
+        result:
+          type: Result
+        answers:
+          type: Answer[]
+
+    ResultHeaderCell:
+      description: Column definition for the Results table.
+      source: packages/results/src/schemas/results.ts::ResultHeaderCell
+      fields:
+        id:
+          type: string
+        label:
+          type: string
+        blocks:
+          type: Array<{ id: string; groupId: string }> | undefined
+          description: >
+            Input blocks whose answers contribute to this column (for answer-based
+            columns).
+        blockType:
+          type: InputBlockType | undefined
+        variableIds:
+          type: string[] | undefined
+          description: Variables that populate this column (for variable-based columns).
+
+    ResultsTableRow:
+      description: Internal row representation in the Results table.
+      source: packages/results/src/schemas/results.ts::TableData
+      fields:
+        id:
+          type: { plainText: string }
+          description: >
+            Result id as plain text; used as the row key and export identifier.
+        other_columns:
+          type: Record<string, { element?: JSX.Element; plainText: string }>
+          description: >
+            Arbitrary columns indexed by ResultHeaderCell.id, each with plainText
+            and optional rendered element.
+
+    SetVariableHistoryItem:
+      description: Snapshot of variable changes for replay and debugging.
+      source: packages/variables/src/schemas.ts::setVariableHistoryItemSchema
+      fields:
+        resultId:
+          type: string
+        index:
+          type: number
+          description: Monotonic index within a result, used to order history.
+        blockId:
+          type: string
+        blockIndex:
+          type: number | null
+          description: Block index used during replay to know when to apply.
+        variableId:
+          type: string
+        value:
+          type: string | string[] | null
+          description: >
+            New value assigned to the variable at that moment. Stored as JSON
+            (string or list of strings).
+
+    Log:
+      description: Persisted execution log entry linked to a Result.
+      source: packages/logs/src/schemas.ts::logSchema
+      fields:
+        id:
+          type: string
+        createdAt:
+          type: Date
+        resultId:
+          type: string
+        status:
+          type: string
+          description: Logical status such as "error", "success" or "info".
+        description:
+          type: string
+          description: Short human-readable description of what happened.
+        details:
+          type: string | null
+          description: >
+            Optional details string; long payloads are shortened before
+            persistence.
+        context:
+          type: string | null
+          description: Optional context string for grouping or extra metadata.
+
+    LogInSession:
+      description: Ephemeral log shape used in chat responses before persistence.
+      source: packages/logs/src/schemas.ts::logInSessionSchema
+      fields:
+        status:
+          type: string | undefined
+        description:
+          type: string
+        details:
+          type: string | undefined
+        context:
+          type: string | undefined
+
+    TranscriptMessage:
+      description: Single message item in a reconstructed result transcript.
+      source:
+        - packages/bot-engine/src/computeResultTranscript.ts
+        - apps/builder/src/features/results/api/router.ts
+      fields:
+        role:
+          type: string
+          description: '"bot" or "user".'
+        type:
+          type: string
+          description: '"text", "image", "video" or "audio".'
+        text:
+          type: string | undefined
+        image:
+          type: string | undefined
+        video:
+          type: string | undefined
+        audio:
+          type: string | undefined
+
+    GroupV6:
+    Variable:
+      description: Variable definition used in flows and persisted results.
+      source: packages/variables/src/schemas.ts
+      fields:
+        id:
+          type: string
+        name:
+          type: string
+        isSessionVariable:
+          type: boolean | undefined
+          description: >
+            If true, variable is session-only and not saved in the Results table.
+            If false or undefined, variable can be persisted depending on builder
+            settings.
+        value:
+          type: string | string[] | null | undefined
+          description: >
+            Stored value when reading from the database; strings or list of
+            strings. Complex values are stringified before persistence.
+
+    ResultsTablePreferences:
+      description: Per-Typebot preferences for the Results table columns.
+      source: apps/builder/src/features/results/components/table/ResultsTable.tsx
+      fields:
+        columnsOrder:
+          type: string[] | undefined
+          description: Ordered list of column ids to display.
+        columnsVisibility:
+          type: Record<string, boolean> | undefined
+          description: Per-column visibility flags (false means hidden).
+        columnsWidth:
+          type: Record<string, number> | undefined
+          description: Per-column width in pixels used by the table UI.
+
+    GroupV6:
+      description: A column of blocks on the canvas.
+      source: packages/groups/src/schemas.ts
+      fields:
+        id:
+          type: string
+        title:
+          type: string
+        graphCoordinates:
+          type: object
+          fields:
+            x: number
+            y: number
+        blocks:
+          type: BlockV6[]
+
+    BlockV6:
+      description: Union of all block types in v6.
+      source: packages/blocks/core/src/schemas/schema.ts
+      union_of:
+        - StartBlock
+        - BubbleBlock
+        - InputBlockV6
+        - LogicBlockV6
+        - IntegrationBlockV6
+        - ForgedBlock
+      common_fields:
+        id:
+          type: string
+        outgoingEdgeId:
+          type: string | undefined
+          description: Id of edge leaving this block.
+
+    Edge:
+      description: Directed connection in the flow graph.
+      source: packages/typebot/src/schemas/edge.ts
+      fields:
+        id:
+          type: string
+        from:
+          type: BlockSource | EventSource
+          variants:
+            BlockSource:
+              fields:
+                blockId: string
+                itemId: string | undefined
+                pathId: string | undefined
+            EventSource:
+              fields:
+                eventId: string
+        to:
+          fields:
+            groupId: string
+            blockId: string | undefined
+    Event:
+      description: Entry point on the canvas; can be START or other trigger events.
+      source: packages/events/src/schemas.ts
+      type_enum:
+        source: packages/events/src/constants.ts::EventType
+        values:
+          - start
+          - command
+          - reply
+          - invalidReply
+      fields:
+        id:
+          type: string
+        type:
+          type: EventType
+        outgoingEdgeId:
+          type: string | undefined
+          description: Id of edge leaving this event.
+        graphCoordinates:
+          type: object
+          fields:
+            x: number
+            y: number
+        options:
+          description: Present on some event types only.
+          variants:
+            command:
+              fields:
+                command: string | undefined
+                resumeAfter: boolean | undefined
+            reply:
+              fields:
+                contentVariableId: string | undefined
+                inputNameVariableId: string | undefined
+                inputTypeVariableId: string | undefined
+            invalidReply:
+              fields:
+                contentVariableId: string | undefined
+                inputNameVariableId: string | undefined
+                inputTypeVariableId: string | undefined
+
+  helper_concepts:
+    events_and_entry_points:
+      description: >
+        Events define where and how a conversation can start. Each Typebot has at
+        least one START event; additional events (command, reply, invalidReply)
+        can be added as alternative entry points.
+      source: packages/events/src/schemas.ts
+      types:
+        start:
+          description: Default entry point when a user opens the bot.
+          behavior_notes:
+            - If Typebot.events is omitted on create, the server creates a START event automatically at { x: 0, y: 0 }.
+            - A single outgoingEdgeId typically points from the START event to the first group.
+        command:
+          description: >
+            Triggers a flow when a named command is sent (e.g. via Typebot.sendCommand
+            in embeds or a continueChat HTTP request with message type "command").
+          options_fields:
+            command: string | undefined
+            resumeAfter: boolean | undefined
+          behavior_notes:
+            - By default, executing a command event runs its flow and then ends the session unless a Return block is used.
+        reply:
+          description: >
+            Entry point when the bot should react to an incoming reply outside
+            the main flow; can capture content and metadata into variables.
+          options_fields:
+            contentVariableId: string | undefined
+            inputNameVariableId: string | undefined
+            inputTypeVariableId: string | undefined
+
+    results_and_persistence:
+      description: >
+        How variables are persisted into the Results table, how Result rows are
+        shaped, and how Result IDs tie submissions, logs and history together.
+      source:
+        - packages/variables/src/schemas.ts
+        - packages/variables/src/filterVariablesWithValues.ts
+        - packages/results/src/schemas/results.ts
+        - packages/results/src/parseResultHeader.ts
+        - packages/results/src/convertResultsToTableData.ts
+        - packages/bot-engine/src/queries/upsertResult.ts
+        - packages/bot-engine/src/blocks/logic/setVariable/executeSetVariable.ts
+        - packages/prisma/mysql/schema.prisma::Result
+      key_points:
+        variables_schema:
+          description: >
+            Variable has id, name, optional isSessionVariable and value
+            (string or list). When persisted in results, only non-session
+            variables with defined values are saved.
+          isSessionVariable_semantics:
+            - If true, variable is session-only; never written to Result.variables.
+            - If false or undefined, variable is eligible to be persisted.
+        save_in_results_flag:
+          description: >
+            In the builder UI, the "Save in results" toggle controls
+            isSessionVariable. Disabling the toggle sets isSessionVariable to
+            true (session-only). Enabling it ensures the variable value is
+            included in the Results table.
+          docs_references:
+            - apps/docs/editor/variables.mdx
+            - apps/docs/editor/blocks/logic/set-variable.mdx
+        persistence_pipeline:
+          description: >
+            On upsertResult, the engine filters variables with
+            filterNonSessionVariablesWithValues and stores them on the Result
+            row. Answers and variables are then transformed into table data via
+            parseResultHeader and convertResultsToTableData.
+          steps:
+            - UpsertResult receives typebot and resultId.
+            - filterNonSessionVariablesWithValues keeps variables with value and !isSessionVariable.
+            - prisma.result.upsert writes these variables, logs, edges and setVariableHistory.
+            - parseResultHeader builds ResultHeaderCell[] from input blocks and variables.
+            - convertResultsToTableData maps results.answers and results.variables into rows.
+        result_id_semantics:
+          description: >
+            Result.id is the canonical identifier for a submission. It ties
+            together the Result row, logs, visited edges, variable history and
+            any variables where "Result ID" has been stored.
+          generation:
+            - At session start, getOrInitResult either reuses an existing Result
+              for the user (when remember user is enabled) or creates a new id.
+            - The Set Variable type "Result ID" uses the current in-session
+              resultId when available, otherwise a new id via createId().
+          usage_patterns:
+            - Use a Set Variable block with type "Result ID" and "Save in results"
+              enabled to expose the submission identifier as a column.
+            - Use this id when integrating with external CRMs or analytics as a
+              stable reference.
+        set_variable_history:
+          description: >
+            Every variable change applied by Set Variable blocks can be stored in
+            SetVariableHistoryItem linked to the Result. This powers replay and
+            debugging of variable evolution over time.
+          contents:
+            - resultId and index to order events.
+            - variableId, blockId, optional blockIndex.
+            - value stored as JSON (string or list of strings).
+
+    logs_and_transcript:
+      description: >
+        How execution logs, visited edges and SetVariableHistory items are
+        combined to reconstruct a human-readable transcript for each Result.
+      source:
+        - packages/bot-engine/src/computeResultTranscript.ts
+        - packages/bot-engine/src/logs/saveLog.ts
+        - packages/bot-engine/src/api/handleContinueChat.ts
+        - packages/results/src/schemas/results.ts
+        - packages/logs/src/schemas.ts
+        - apps/builder/src/features/results/api/router.ts
+      key_points:
+        logs:
+          description: >
+            Logs are appended during execution (success, error, info) and linked
+            to Result via resultId. They capture integration errors, retries and
+            other diagnostic information.
+          shapes:
+            persisted:
+              description: >
+                Database rows following logSchema with id, createdAt, resultId,
+                status, description, details, context.
+            in_session:
+              description: >
+                Lightweight LogInSession objects returned in chat responses and
+                optionally sent from clients as clientLogs.
+          saving:
+            - saveLog writes prisma.log rows with resultId, status, description, details.
+            - upsertResult can bulk-create logs for a Result from ContinueChatResponse.logs.
+          api:
+            - GET /v1/typebots/{typebotId}/results/{resultId}/logs returns { logs: Log[] }.
+            - Chat responses include logs?: LogInSession[] describing the last execution step.
+        visited_edges:
+          description: >
+            Sequence of edge ids traversed during a run. Stored as VisitedEdge
+            rows linked to Result; used to replay branching decisions (A/B test,
+            RETURN, reply off-default-path).
+        transcript_computation:
+          description: >
+            computeResultTranscript walks groups and blocks using edges,
+            answers, setVariableHistory and visitedEdges to reconstruct a
+            linear TranscriptMessage[].
+          transcript_shape:
+            description: >
+              Each TranscriptMessage has role ("bot" | "user"), type
+              ("text" | "image" | "video" | "audio") and a corresponding
+              content field (text/image/video/audio).
+          steps:
+            - Determine the first edge from START event (v6) or first block (v5).
+            - For each block in order:
+              - Apply any pending SetVariableHistory snapshots for that block.
+              - For bubble blocks, render messages based on content and variables.
+              - For input blocks, consume the next Answer, bind it to variables and
+                choose the next edge based on reply.
+              - For Condition blocks, evaluate conditions against current variables.
+              - For AB test and RETURN blocks, use visitedEdges to pick the path.
+              - For Typebot link blocks, enter/exit nested flows while maintaining
+                a typebotsQueue and resumeEdgeId.
+            - Continue following edges until the flow ends.
+        replay_semantics:
+          description: >
+            Transcripts are not stored raw; they are recomputed on demand by
+            replaying the flow using answers, visitedEdges and
+            SetVariableHistory against the published Typebot graph.
+          behavior_notes:
+            - If the flow structure changes after a result was collected,
+              replay may diverge from what the user originally saw.
+            - Because branching is driven by visitedEdges and variable
+              history, transcripts are deterministic for a given Typebot
+              version and captured data.
+        debugging_uses:
+          description: >
+            Logs, visited edges and SetVariableHistory provide a full picture of
+            what happened during a run, which can be surfaced in UI or external
+            tools for debugging and analytics.
+    input_blocks:
+      source: packages/blocks/inputs/src/schema.ts
+      description: >
+        User-facing input steps (text, email, file, cards, etc.), discriminated
+        by "type".
+      type_enum:
+        source: packages/blocks/inputs/src/constants.ts::InputBlockType
+      common_options:
+        base_schema: packages/blocks/base/src/schemas.ts::optionBaseSchema
+      examples:
+        TextInput:
+          type_literal: "text input"
+          schema: textInputSchema
+          source: packages/blocks/inputs/src/text/schema.ts
+          options_summary:
+            - labels.placeholder
+            - labels.button
+            - isLong
+            - inputMode
+            - audioClip
+            - attachments
+        Cards:
+          type_literal: "cards"
+          schema: cardsBlockSchema
+          source: packages/blocks/inputs/src/cards/schema.ts
+          description: >
+            Item-based input where each card can have image, title, description
+            and multiple paths for branching.
+          options:
+            base: cardsOptionsSchema
+            fields:
+              saveResponseMapping:
+                type: Array<{ field, variableId }>
+                field_enum_source: packages/blocks/inputs/src/cards/constants.ts::cardMappableFields
+          item_shape:
+            base: cardsItemSchema
+            fields:
+              id: string
+              imageUrl: string | null
+              title: string | null
+              description: string | null
+              options:
+                displayCondition:
+                  isEnabled: boolean | undefined
+                  condition: Condition | undefined
+                internalValue: string | null
+              paths: CardsItemPath[] | undefined
+          paths_shape:
+            base: cardsItemPathSchema
+            fields:
+              id: string
+              text: string | undefined
+              outgoingEdgeId: string | undefined
+          branching_notes:
+            - One Edge per path.
+            - Edge.from includes blockId, itemId and pathId.
+            - Each path.outgoingEdgeId matches its Edge.id.
+
+    bubble_blocks:
+      source: packages/blocks/bubbles/src/schema.ts
+      description: >
+        Non-interactive messages (text, image, video, embeds, audio) shown to the user.
+      type_enum:
+        source: packages/blocks/bubbles/src/constants.ts::BubbleBlockType
+      common_shape:
+        base_schema: packages/blocks/base/src/schemas.ts::blockBaseSchema
+        discriminant: type
+        content_field: content
+      examples:
+        Text:
+          schema: textBubbleBlockSchema
+          source: packages/blocks/bubbles/src/text/schema.ts
+          content_fields:
+            - html
+            - richText
+            - plainText
+        Embed:
+          schema: embedBubbleBlockSchema
+          source: packages/blocks/bubbles/src/embed/schema.ts
+          content_fields:
+            - url
+            - height
+            - waitForEvent
+
+    logic_blocks:
+      source: packages/blocks/logic/src/schema.ts
+      description: >
+        Blocks that manipulate variables, branch the flow, or control execution.
+      type_enum:
+        source: packages/blocks/logic/src/constants.ts::LogicBlockType
+      categories:
+        flow_control:
+          blocks:
+            - redirectBlockSchema
+            - jumpBlockSchema
+            - returnBlockSchema
+            - typebotLinkBlockSchema
+            - waitBlockSchema
+        variables_and_compute:
+          blocks:
+            - setVariableBlockSchema
+            - scriptBlockSchema
+        branching:
+          blocks:
+            - conditionBlockSchemas.v6
+            - abTestBlockSchemas.v6
+        webhooks:
+          blocks:
+            - webhookBlockSchema
+      branching_notes:
+        - Condition and A/B test blocks have multiple paths.
+        - Each path has an outgoingEdgeId and a path id used in Edge.from.pathId.
+      blocks:
+        set_variable:
+          type_literal: "Set variable"
+          schema:
+            source: packages/blocks/logic/src/setVariable/schema.ts::setVariableBlockSchema
+            options_discriminant: type
+          options_sets:
+            basic:
+              types_source: packages/blocks/logic/src/setVariable/constants.ts::valueTypesWithNoOptions
+              fields:
+                variableId: string | undefined
+                isExecutedOnClient: boolean | undefined
+                isUnsafe: boolean | undefined
+            date:
+              types:
+                - Now
+                - Yesterday
+                - Tomorrow
+              extra_fields:
+                timeZone: string | undefined
+            custom:
+              types:
+                - Custom
+              fields:
+                expressionToEvaluate: string | undefined
+                isCode: boolean | undefined
+                expressionDescription: string | undefined
+                saveErrorInVariableId: string | undefined
+            map_list_items:
+              types:
+                - Map item with same index
+              fields:
+                mapListItemParams:
+                  baseItemVariableId: string | undefined
+                  baseListVariableId: string | undefined
+                  targetListVariableId: string | undefined
+            append_value:
+              types:
+                - Append value(s)
+              fields:
+                item: string | undefined
+            pop_or_shift:
+              types:
+                - Pop
+                - Shift
+              fields:
+                saveItemInVariableId: string | undefined
+          defaults_source:
+            source: packages/blocks/logic/src/setVariable/constants.ts::defaultSetVariableOptions
+          usage_notes:
+            - Use variableId to choose which variable to modify.
+            - Choose type based on the operation you want (date, list, environment, custom expression).
+        wait:
+          type_literal: "Wait"
+          schema:
+            source: packages/blocks/logic/src/wait/schema.ts::waitBlockSchema
+          options_fields:
+            secondsToWaitFor: string | undefined
+            shouldPause: boolean | undefined
+          usage_notes:
+            - Use secondsToWaitFor to delay progression; shouldPause controls whether execution is paused.
+        redirect:
+          type_literal: "Redirect"
+          schema:
+            source: packages/blocks/logic/src/redirect/schema.ts::redirectBlockSchema
+          options_fields:
+            url: string | undefined
+            isNewTab: boolean | undefined
+          usage_notes:
+            - Use to end the conversation and redirect to an external URL.
+        jump:
+          type_literal: "Jump"
+          schema:
+            source: packages/blocks/logic/src/jump/schema.ts::jumpBlockSchema
+          options_fields:
+            groupId: string | undefined
+            blockId: string | undefined
+          usage_notes:
+            - Jump to another group or specific block inside the same Typebot.
+        script:
+          type_literal: "Code"
+          schema:
+            source: packages/blocks/logic/src/script/schema.ts::scriptBlockSchema
+          options_fields:
+            name: string | undefined
+            content: string | undefined
+            isExecutedOnClient: boolean | undefined
+            isUnsafe: boolean | undefined
+            shouldExecuteInParentContext: boolean | undefined
+          usage_notes:
+            - Use for custom code or expressions that do not fit other blocks.
+            - Be careful with isUnsafe and client execution flags.
+        typebot_link:
+          type_literal: "Typebot link"
+          schema:
+            source: packages/blocks/logic/src/typebotLink/schema.ts::typebotLinkBlockSchema
+          options_fields:
+            typebotId: string | undefined
+            groupId: string | undefined
+            mergeResults: boolean | undefined
+          usage_notes:
+            - Invoke another Typebot and optionally merge its results back.
+        return:
+          type_literal: "Return"
+          schema:
+            source: packages/blocks/logic/src/return/schema.ts::returnBlockSchema
+          usage_notes:
+            - Use to return from a linked Typebot back to the caller flow.
+        condition:
+          type_literal: "Condition"
+          schema:
+            source: packages/blocks/logic/src/condition/schema.ts::conditionBlockSchemas
+          items_shape:
+            base_source: packages/blocks/logic/src/condition/schema.ts::conditionItemSchemas
+            fields:
+              id: string
+              content: Condition | undefined
+              outgoingEdgeId: string | undefined
+          branching:
+            description: >
+              Each item represents one condition branch; edges use itemId to route to the target group.
+        ab_test:
+          type_literal: "AB test"
+          schema:
+            source: packages/blocks/logic/src/abTest/schema.ts::abTestBlockSchemas
+          items_shape:
+            a:
+              path_literal: a
+            b:
+              path_literal: b
+          options_fields:
+            aPercent: number | undefined
+          branching:
+            description: >
+              Splits traffic between two paths "a" and "b"; each item carries its own outgoingEdgeId.
+        webhook_logic:
+          type_literal: "webhook"
+          schema:
+            source: packages/blocks/logic/src/webhook/schema.ts::webhookBlockSchema
+          options_fields:
+            responseVariableMapping:
+              type: Array<{ id, variableId, bodyPath }> | undefined
+          usage_notes:
+            - Use to pause the flow and wait for an external webhook callback.
+            - It does not send HTTP requests; it only listens and maps the response.
+            - Combine with an integration Webhook/HTTP Request block or external service that triggers the callback URL.
+
+    integration_blocks:
+      source: packages/blocks/integrations/src/schema.ts
+      description: >
+        Blocks that call external systems (HTTP APIs, sheets, analytics, email, AI).
+      type_enum:
+        source: packages/blocks/integrations/src/constants.ts::IntegrationBlockType
+      http_base:
+        source: packages/blocks/integrations/src/httpRequest/schema.ts
+        request_shape:
+          fields:
+            url: string
+            method: HttpMethod | undefined
+            headers: KeyValue[] | undefined
+            queryParams: KeyValue[] | undefined
+            body: string | undefined
+        options_shape:
+          fields:
+            variablesForTest: VariableForTest[] | undefined
+            responseVariableMapping: ResponseVariableMapping[] | undefined
+            isCustomBody: boolean | undefined
+            isExecutedOnClient: boolean | undefined
+            webhook: HttpRequest | undefined
+            timeout: number | undefined
+            proxyCredentialsId: string | undefined
+      derived_http_integrations:
+        description: >
+          Integrations that reuse HTTP request schemas and only change type.
+        examples:
+          Zapier:
+            schemas: packages/blocks/integrations/src/zapier/schema.ts::zapierBlockSchemas
+          MakeCom:
+            schemas: packages/blocks/integrations/src/makeCom/schema.ts::makeComBlockSchemas
+          PabblyConnect:
+            schemas: packages/blocks/integrations/src/pabblyConnect/schema.ts::pabblyConnectBlockSchemas
+      other_integrations:
+        examples:
+          OpenAI:
+            source: packages/blocks/integrations/src/openai/schema.ts
+          GoogleSheets:
+            source: packages/blocks/integrations/src/googleSheets/schema.ts
+          Chatwoot:
+            source: packages/blocks/integrations/src/chatwoot/schema.ts
+          GoogleAnalytics:
+            source: packages/blocks/integrations/src/googleAnalytics/schema.ts
+          Pixel:
+            source: packages/blocks/integrations/src/pixel/schema.ts
+          SendEmail:
+            source: packages/blocks/integrations/src/sendEmail/schema.ts
+      integrations:
+        openai:
+          type_literal: "OpenAI"
+          schema:
+            source: packages/blocks/integrations/src/openai/schema.ts::openAIBlockSchema
+            options_discriminant: task
+            tasks_source: packages/blocks/integrations/src/openai/constants.ts::openAITasks
+          options_shapes:
+            base:
+              description: Shared connection settings.
+              fields:
+                credentialsId: string | undefined
+                baseUrl: string | undefined
+                apiVersion: string | undefined
+            initial:
+              description: Unconfigured state with no task selected.
+            chat_completion:
+              task_literal_from_constants_index: 0
+              key_fields:
+                model: string | undefined
+                messages:
+                  type: (nativeMessage | messagesSequence | dialogue)[]
+                  note: >
+                    nativeMessage uses role/content; sequence/dialogue use variableIds
+                    referencing previous conversations.
+                advancedSettings.temperature: number | Variable | undefined
+                responseMapping:
+                  type: Array<{ id, valueToExtract, variableId }>
+                  valueToExtract_enum_source: packages/blocks/integrations/src/openai/constants.ts::chatCompletionResponseValues
+            create_image:
+              task_literal_from_constants_index: 2
+              key_fields:
+                prompt: string | undefined
+                advancedOptions.size: "256x256" | "512x512" | "1024x1024" | undefined
+                responseMapping:
+                  type: Array<{ id, valueToExtract, variableId }>
+                  valueToExtract_values:
+                    - Image URL
+            create_speech:
+              task_literal_from_constants_index: 1
+              key_fields:
+                model: string | undefined
+                input: string | undefined
+                voice_enum_source: packages/blocks/integrations/src/openai/constants.ts::openAIVoices
+                saveUrlInVariableId: string | undefined
+          usage_notes:
+            - Always choose a task before filling other fields.
+            - Use responseMapping or saveUrlInVariableId to persist outputs into variables.
+            - credentialsId/baseUrl/apiVersion align with stored OpenAI credentials.
+        google_sheets:
+          type_literal: "Google Sheets"
+          schema:
+            source: packages/blocks/integrations/src/googleSheets/schema.ts::googleSheetsBlockSchemas
+            options_discriminant: action
+            action_enum_source: packages/blocks/integrations/src/googleSheets/constants.ts::GoogleSheetsAction
+          options_base:
+            fields:
+              credentialsId: string | undefined
+              sheetId: string | undefined
+              spreadsheetId: string | undefined
+          actions:
+            initial:
+              description: No action selected; placeholder configuration.
+            get:
+              action_literal: "Get data from sheet"
+              fields:
+                referenceCell:
+                  description: >
+                    Optional reference position; omitted in v6, logic uses filters instead.
+                filter:
+                  comparisons:
+                    type: Array<{ id, column, comparisonOperator, value }>
+                    comparisonOperator_enum_source: @typebot.io/conditions/constants::ComparisonOperators
+                  logicalOperator_enum_source: @typebot.io/conditions/constants::LogicalOperator
+                cellsToExtract:
+                  type: Array<{ id, column, variableId }>
+                totalRowsToExtract_enum_source: packages/blocks/integrations/src/googleSheets/constants.ts::totalRowsToExtractOptions
+            insert_row:
+              action_literal: "Insert a row"
+              fields:
+                cellsToInsert:
+                  type: Array<{ id, column, value }>
+            update_row:
+              action_literal: "Update a row"
+              fields:
+                cellsToUpsert:
+                  type: Array<{ id, column, value }>
+                referenceCell:
+                  description: Optional in v5; omitted in v6.
+                filter:
+                  comparisons:
+                    type: Array<{ id, column, comparisonOperator, value }>
+                  logicalOperator_enum_source: @typebot.io/conditions/constants::LogicalOperator
+          usage_notes:
+            - Use get to read rows and map cells into variables via cellsToExtract.
+            - Use insert_row to append data from variables into a sheet.
+            - Use update_row with filters to upsert matching rows.
+        http_webhook:
+          type_literal: "Webhook"
+          schema:
+            source: packages/blocks/integrations/src/httpRequest/schema.ts::httpBlockSchemas
+            options_source: packages/blocks/integrations/src/httpRequest/schema.ts::httpRequestOptionsSchemas
+          request_fields:
+            url: string | undefined
+            method: HttpMethod | undefined
+            headers: KeyValue[] | undefined
+            queryParams: KeyValue[] | undefined
+            body: string | undefined
+          options_fields:
+            variablesForTest: VariableForTest[] | undefined
+            responseVariableMapping:
+              type: ResponseVariableMapping[] | undefined
+              fields:
+                id: string
+                variableId: string | undefined
+                bodyPath: string | undefined
+            isCustomBody: boolean | undefined
+            isExecutedOnClient: boolean | undefined
+            webhook: HttpRequest | undefined
+            timeout: number | undefined
+            proxyCredentialsId: string | undefined
+          defaults_source:
+            method_default: packages/blocks/integrations/src/httpRequest/constants.ts::defaultHttpRequestAttributes.method
+            options_defaults: packages/blocks/integrations/src/httpRequest/constants.ts::defaultHttpRequestBlockOptions
+          usage_notes:
+            - Use responseVariableMapping to persist JSON body fields into variables.
+            - Use variablesForTest to supply example values in the builder test mode.
+            - Use isExecutedOnClient when the request should run from the browser.
+            - When the user asks to "send all data" or "call a webhook", create this integration block and configure the outgoing request body/headers/query; do not use the logic webhook block for that.
+        zapier:
+          type_literal: "Zapier"
+          schema:
+            source: packages/blocks/integrations/src/zapier/schema.ts::zapierBlockSchemas
+          behavior: >
+            Same HTTP request structure as Webhook; only type differs so the UI
+            can show Zapier-specific branding.
+        make_com:
+          type_literal: "Make.com"
+          schema:
+            source: packages/blocks/integrations/src/makeCom/schema.ts::makeComBlockSchemas
+          behavior: >
+            Same HTTP request structure as Webhook; only type differs so the UI
+            can show Make-specific branding.
+        pabbly_connect:
+          type_literal: "Pabbly"
+          schema:
+            source: packages/blocks/integrations/src/pabblyConnect/schema.ts::pabblyConnectBlockSchemas
+          behavior: >
+            Same HTTP request structure as Webhook; only type differs so the UI
+            can show Pabbly-specific branding.
+        send_email:
+          type_literal: "Email"
+          schema:
+            source: packages/blocks/integrations/src/sendEmail/schema.ts::sendEmailBlockSchema
+          options_fields:
+            credentialsId: string | undefined
+            isCustomBody: boolean | undefined
+            isBodyCode: boolean | undefined
+            recipients: string[] | undefined
+            subject: string | undefined
+            body: string | undefined
+            replyTo: string | undefined
+            cc: string[] | undefined
+            bcc: string[] | undefined
+            attachmentsVariableId: string | undefined
+          usage_notes:
+            - Use recipients/cc/bcc as email address lists.
+            - If isBodyCode is true, body is treated as HTML or templated code.
+            - attachmentsVariableId should point to a variable holding file uploads.
+        chatwoot:
+          type_literal: "Chatwoot"
+          schema:
+            source: packages/blocks/integrations/src/chatwoot/schema.ts::chatwootBlockSchema
+          options_fields:
+            task_enum_source: packages/blocks/integrations/src/chatwoot/constants.ts::chatwootTasks
+            baseUrl: string | undefined
+            websiteToken: string | undefined
+            user:
+              id: string | undefined
+              email: string | undefined
+              name: string | undefined
+              avatarUrl: string | undefined
+              phoneNumber: string | undefined
+          usage_notes:
+            - Use to sync conversations with a Chatwoot inbox.
+            - Provide user fields to attach context to a contact/session.
+        google_analytics:
+          type_literal: "Google Analytics"
+          schema:
+            source: packages/blocks/integrations/src/googleAnalytics/schema.ts::googleAnalyticsBlockSchema
+          options_fields:
+            trackingId: string | undefined
+            category: string | undefined
+            action: string | undefined
+            label: string | undefined
+            value: number | Variable | undefined
+            sendTo: string | undefined
+          usage_notes:
+            - Use to send event hits with category/action/label/value.
+            - value can come from a variable or literal number.
+        pixel:
+          type_literal: "Pixel"
+          schema:
+            source: packages/blocks/integrations/src/pixel/schema.ts::pixelBlockSchema
+          options_discriminant: eventType
+          eventType_enum_source: packages/blocks/integrations/src/pixel/constants.ts::pixelEventTypes
+          options_shapes:
+            base:
+              fields:
+                pixelId: string | undefined
+                isInitSkip: boolean | undefined
+                params:
+                  type: Array<{ id, key, value }>
+            initial:
+              description: Unconfigured state with no eventType.
+            standard:
+              description: Standard pixel events using eventType from the enum.
+            custom:
+              description: Custom pixel events; adds name string to describe the event.
+
+    file_input_block:
+      description: File upload input block (single or multiple files).
+      type_literal: "file input"
+      schema:
+        source: packages/blocks/inputs/src/file/schema.ts
+        block_schemas:
+          v5: fileInputBlockSchemas.v5
+          v6: fileInputBlockSchemas.v6
+        options_schemas:
+          v5: fileInputOptionsV5Schema
+          v6: fileInputOptionsSchemas.v6
+      default_options:
+        source: packages/blocks/inputs/src/file/constants.ts::defaultFileInputOptions
+        values:
+          isRequired: true
+          isMultipleAllowed: false
+          visibility: Auto
+          labels:
+            has_rich_placeholder_html: true
+            button: Upload
+            clear: Clear
+            skip: Skip
+      visibility_enum:
+        source: packages/blocks/inputs/src/file/constants.ts::fileVisibilityOptions
+        values:
+          - Auto
+          - Public
+          - Private
+      allowed_file_types:
+        description: >
+          Optional allowlist of file types; uses extensions or MIME types.
+      versioning_notes:
+        - v5 options include sizeLimit (bytes).
+        - v6 options omit sizeLimit; size constraints are handled elsewhere.
+
+apis:
+  create_typebot:
+    description: Create a new Typebot in a workspace.
+    http:
+      method: POST
+      path: /api/v1/typebots
+      auth:
+        type: bearer_or_session
+        notes: >
+          Use session cookies from the builder frontend, or a Bearer token from
+          an external app.
+    input_schema:
+      source: apps/builder/src/features/typebot/api/handleCreateTypebot.ts::createTypebotInputSchema
+      shape:
+        workspaceId: string
+        typebot:
+          description: >
+            Partial TypebotV6 constrained to fields allowed on create.
+          fields:
+            name: string | undefined
+            icon: string | undefined
+            selectedThemeTemplateId: string | undefined
+            groups: GroupV6[] | undefined
+            events: Event[] | undefined
+            theme: Theme | undefined
+            settings: Settings | undefined
+            folderId: string | null | undefined
+            variables: Variable[] | undefined
+            edges: Edge[] | undefined
+            resultsTablePreferences: ResultsTablePreferences | undefined
+            publicId: string | undefined
+            customDomain: string | undefined
+    output_schema:
+      shape:
+        typebot: TypebotV6
+    server_behavior:
+      notes:
+        - Sets version to latestTypebotVersion.
+        - Creates START event if events is omitted.
+        - Uses empty array if edges is omitted.
+        - Sanitizes groups, variables, settings based on workspace and plan.
+
+agent_guidelines:
+  - Always target TypebotV6 for new flows.
+  - Prefer minimal valid flows first, then add complexity (branches, integrations).
+  - Ensure all ids (groups, blocks, edges, items, paths) are unique strings.
+  - Use itemId/pathId on Edge.from when branching from multi-item inputs.
+  - Use options.variableId to persist important answers into variables.
+  - For outgoing HTTP calls or “send all data” requests, use the integration Webhook/HTTP Request block; reserve the logic webhook block for listening to callbacks and resuming the flow.
+
+agent_prompts:
+  flow_builder:
+    description: >
+      System-level rules for an AI agent that designs Typebot flows and emits
+      strict JSON for POST /api/v1/typebots.
+    output_contract:
+      top_level_shape:
+        json:
+          workspaceId: workspace_123
+          typebot:
+            name: My generated bot
+            groups: []
+            edges: []
+            variables: []
+      rules:
+        - Respond with a single JSON object and no extra text.
+        - JSON must be valid: no comments, no trailing commas.
+        - Do not wrap the final answer in markdown fences.
+        - Do not set version or id on typebot; server handles these.
+        - Omitting events lets the server create a START event automatically.
+    structure:
+      groups:
+        example:
+          id: group_main
+          title: Main
+          graphCoordinates:
+            x: 0
+            y: 0
+          blocks: []
+      blocks:
+        common_fields:
+          id: string
+          type: string
+          outgoingEdgeId: string | undefined
+        families:
+          - BubbleBlock
+          - InputBlockV6
+          - LogicBlockV6
+          - IntegrationBlockV6
+      edges:
+        shape:
+          id: string
+          from:
+            blockId: string
+            itemId: string | undefined
+            pathId: string | undefined
+          to:
+            groupId: string
+            blockId: string | undefined
+      variables:
+        example:
+          id: var_email
+          name: Email
+          type: Email
+    patterns:
+      minimal_flow:
+        description: Minimal valid flow with a welcome bubble and text input.
+        request_example:
+          json:
+            workspaceId: workspace_123
+            typebot:
+              name: Lead capture with branching
+              groups:
+                - id: group_welcome
+                  title: Welcome
+                  graphCoordinates:
+                    x: 0
+                    y: 0
+                  blocks:
+                    - id: block_welcome_bubble
+                      type: text
+                      content:
+                        plainText: Hi! I will ask a few questions.
+                      outgoingEdgeId: edge_welcome_to_input
+                    - id: block_name_input
+                      type: text input
+                      options:
+                        variableId: var_name
+                        labels:
+                          placeholder: Type your name
+                          button: Next
+                      outgoingEdgeId: edge_input_to_logic
+                - id: group_logic
+                  title: Logic
+                  graphCoordinates:
+                    x: 400
+                    y: 0
+                  blocks: []
+              edges:
+                - id: edge_welcome_to_input
+                  from:
+                    blockId: block_welcome_bubble
+                  to:
+                    groupId: group_welcome
+                    blockId: block_name_input
+                - id: edge_input_to_logic
+                  from:
+                    blockId: block_name_input
+                  to:
+                    groupId: group_logic
+              variables:
+                - id: var_name
+                  name: Name
+                  type: Short text
+        constraints:
+          - All ids for groups, blocks, edges, variables must be unique.
+          - Every outgoingEdgeId must match an Edge.id.
+          - Every Edge.from.blockId must refer to an existing block.
+          - Every Edge.to.groupId must refer to an existing group.
+      explicit_start_event:
+        description: Typebot that explicitly defines a START event and connects it to the first group.
+        snippet:
+          events:
+            - id: event_start_main
+              type: start
+              graphCoordinates:
+                x: 0
+                y: 0
+              outgoingEdgeId: edge_start_to_welcome
+          groups:
+            - id: group_welcome
+              title: Welcome
+              graphCoordinates:
+                x: 200
+                y: 0
+              blocks:
+                - id: block_welcome_bubble
+                  type: text
+                  content:
+                    plainText: Hi! I will ask a few questions.
+                  outgoingEdgeId: edge_welcome_to_input
+                - id: block_name_input
+                  type: text input
+                  options:
+                    variableId: var_name
+                    labels:
+                      placeholder: Type your name
+                      button: Next
+                  outgoingEdgeId: edge_input_to_next
+            - id: group_next
+              title: Next
+              graphCoordinates:
+                x: 600
+                y: 0
+              blocks: []
+          edges:
+            - id: edge_start_to_welcome
+              from:
+                eventId: event_start_main
+              to:
+                groupId: group_welcome
+            - id: edge_welcome_to_input
+              from:
+                blockId: block_welcome_bubble
+              to:
+                groupId: group_welcome
+                blockId: block_name_input
+            - id: edge_input_to_next
+              from:
+                blockId: block_name_input
+              to:
+                groupId: group_next
+          variables:
+            - id: var_name
+              name: Name
+              type: Short text
+      condition_branch:
+        description: Condition block with two branches wired via itemId.
+        snippet:
+          groups:
+            - id: group_logic
+              title: Segment users
+              graphCoordinates:
+                x: 200
+                y: 0
+              blocks:
+                - id: block_condition_segment
+                  type: Condition
+                  items:
+                    - id: condition_item_high_value
+                      outgoingEdgeId: edge_condition_to_vip
+                    - id: condition_item_regular
+                      outgoingEdgeId: edge_condition_to_regular
+            - id: group_vip
+              title: VIP path
+              graphCoordinates:
+                x: 600
+                y: -100
+              blocks: []
+            - id: group_regular
+              title: Regular path
+              graphCoordinates:
+                x: 600
+                y: 100
+              blocks: []
+          edges:
+            - id: edge_condition_to_vip
+              from:
+                blockId: block_condition_segment
+                itemId: condition_item_high_value
+              to:
+                groupId: group_vip
+            - id: edge_condition_to_regular
+              from:
+                blockId: block_condition_segment
+                itemId: condition_item_regular
+              to:
+                groupId: group_regular
+      http_integration_with_mapping:
+        description: Webhook block that maps JSON response fields to variables.
+        snippet:
+          groups:
+            - id: group_integration
+              title: Fetch profile
+              graphCoordinates:
+                x: 400
+                y: 0
+              blocks:
+                - id: block_http_profile
+                  type: Webhook
+                  options:
+                    webhook:
+                      url: https://api.example.com/profile
+                      method: GET
+                      headers:
+                        - id: hdr_auth
+                          key: Authorization
+                          value: Bearer {{var_api_token}}
+                      queryParams:
+                        - id: qp_email
+                          key: email
+                          value: {{var_email}}
+                    responseVariableMapping:
+                      - id: map_full_name
+                        variableId: var_full_name
+                        bodyPath: $.name
+                      - id: map_plan
+                        variableId: var_plan
+                        bodyPath: $.plan
+                  outgoingEdgeId: edge_http_to_next
+            - id: group_after_http
+              title: After HTTP
+              graphCoordinates:
+                x: 800
+                y: 0
+              blocks: []
+          edges:
+            - id: edge_http_to_next
+              from:
+                blockId: block_http_profile
+              to:
+                groupId: group_after_http
+          variables:
+            - id: var_api_token
+              name: API token
+              type: Secret
+            - id: var_email
+              name: Email
+              type: Email
+            - id: var_full_name
+              name: Full name
+              type: Short text
+            - id: var_plan
+              name: Plan
+              type: Short text
+      file_input_then_integration:
+        description: File upload block followed by a Webhook that consumes the file variable.
+        snippet:
+          groups:
+            - id: group_upload
+              title: Upload document
+              graphCoordinates:
+                x: 0
+                y: 0
+              blocks:
+                - id: block_file_upload
+                  type: file input
+                  options:
+                    variableId: var_uploaded_files
+                    isRequired: true
+                    isMultipleAllowed: false
+                    visibility: Auto
+                    labels:
+                      button: Upload your file
+                  outgoingEdgeId: edge_file_to_integration
+            - id: group_process_file
+              title: Process file
+              graphCoordinates:
+                x: 400
+                y: 0
+              blocks:
+                - id: block_http_process_file
+                  type: Webhook
+                  options:
+                    webhook:
+                      url: https://api.example.com/process-file
+                      method: POST
+                      headers:
+                        - id: hdr_content_type
+                          key: Content-Type
+                          value: application/json
+                      body: "{ \"fileVariableId\": \"{{var_uploaded_files}}\" }"
+                  outgoingEdgeId: edge_integration_to_next
+          edges:
+            - id: edge_file_to_integration
+              from:
+                blockId: block_file_upload
+              to:
+                groupId: group_process_file
+            - id: edge_integration_to_next
+              from:
+                blockId: block_http_process_file
+              to:
+                groupId: group_next
+          variables:
+            - id: var_uploaded_files
+              name: Uploaded files
+              type: List
+      set_variable_map_list:
+        description: Set Variable block that maps an item from one list to the item at the same index in another list.
+        snippet:
+          groups:
+            - id: group_map_ids
+              title: Map label to ID
+              graphCoordinates:
+                x: 200
+                y: 0
+              blocks:
+                - id: block_set_id_from_label
+                  type: Set variable
+                  options:
+                    variableId: var_selected_id
+                    type: Map item with same index
+                    mapListItemParams:
+                      baseItemVariableId: var_selected_label
+                      baseListVariableId: var_labels
+                      targetListVariableId: var_ids
+                  outgoingEdgeId: edge_map_to_next
+            - id: group_after_mapping
+              title: After mapping
+              graphCoordinates:
+                x: 600
+                y: 0
+              blocks: []
+          edges:
+            - id: edge_map_to_next
+              from:
+                blockId: block_set_id_from_label
+              to:
+                groupId: group_after_mapping
+          variables:
+            - id: var_labels
+              name: Labels
+              type: List
+            - id: var_ids
+              name: Ids
+              type: List
+            - id: var_selected_label
+              name: Selected label
+              type: Short text
+            - id: var_selected_id
+              name: Selected id
+              type: Short text
+      set_variable_custom_expression:
+        description: Set Variable block that computes a score from other numeric variables using a custom expression.
+        snippet:
+          groups:
+            - id: group_score_logic
+              title: Compute score
+              graphCoordinates:
+                x: 200
+                y: 0
+              blocks:
+                - id: block_set_score
+                  type: Set variable
+                  options:
+                    variableId: var_score
+                    type: Custom
+                    expressionToEvaluate: "{{base_score}} + {{bonus}}"
+                    isCode: false
+                    expressionDescription: Add base score and bonus
+                  outgoingEdgeId: edge_score_to_next
+            - id: group_after_score
+              title: After score
+              graphCoordinates:
+                x: 600
+                y: 0
+              blocks: []
+          edges:
+            - id: edge_score_to_next
+              from:
+                blockId: block_set_score
+              to:
+                groupId: group_after_score
+          variables:
+            - id: var_score
+              name: Score
+              type: Number
+            - id: var_base_score
+              name: base_score
+              type: Number
+            - id: var_bonus
+              name: bonus
+              type: Number
+
+nextjs_client_pattern:
+  description: >
+    External Next.js app calls POST /api/v1/typebots with workspaceId and a
+    TypebotV6-shaped typebot object, authenticated via Bearer token.
+  minimal_request_example:
+    json:
+      workspaceId: workspace_123
+      typebot:
+        name: My AI generated bot
+        groups: []
+        edges: []

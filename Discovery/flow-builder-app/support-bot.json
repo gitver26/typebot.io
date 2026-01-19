@@ -1,0 +1,205 @@
+{
+    "workspaceId": "cm0yoasvt001fq8mubqsy1i2b",
+    "typebot": {
+        "name": "Customer Support Bot",
+        "groups": [
+            {
+                "id": "group_1",
+                "title": "Welcome",
+                "graphCoordinates": {
+                    "x": 0,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_1",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "👋 Welcome to Customer Support! Let's collect your information."
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "outgoingEdgeId": "edge_1"
+                    }
+                ]
+            },
+            {
+                "id": "group_2",
+                "title": "Name",
+                "graphCoordinates": {
+                    "x": 400,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_2",
+                        "type": "text input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "Your name..."
+                            },
+                            "variableId": "var_1"
+                        },
+                        "outgoingEdgeId": "edge_2"
+                    }
+                ]
+            },
+            {
+                "id": "group_3",
+                "title": "Email",
+                "graphCoordinates": {
+                    "x": 800,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_3",
+                        "type": "email input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "your@email.com"
+                            },
+                            "variableId": "var_2"
+                        },
+                        "outgoingEdgeId": "edge_3"
+                    }
+                ]
+            },
+            {
+                "id": "group_4",
+                "title": "Age",
+                "graphCoordinates": {
+                    "x": 1200,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_4",
+                        "type": "number input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "Your age..."
+                            },
+                            "variableId": "var_3"
+                        },
+                        "outgoingEdgeId": "edge_4"
+                    }
+                ]
+            },
+            {
+                "id": "group_5",
+                "title": "Send Data",
+                "graphCoordinates": {
+                    "x": 1600,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_5",
+                        "type": "HTTP request",
+                        "options": {
+                            "method": "POST",
+                            "url": "https://webhook.site/fbe616fe-1a4f-4433-b234-9a774ba43b8e",
+                            "body": "{\"name\":\"{{var_1}}\",\"email\":\"{{var_2}}\",\"age\":\"{{var_3}}\"}"
+                        },
+                        "outgoingEdgeId": "edge_5"
+                    }
+                ]
+            },
+            {
+                "id": "group_6",
+                "title": "Thank You",
+                "graphCoordinates": {
+                    "x": 2000,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "block_6",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "✅ Thank you! Your information has been submitted."
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ],
+        "edges": [
+            {
+                "id": "edge_1",
+                "from": {
+                    "blockId": "block_1"
+                },
+                "to": {
+                    "groupId": "group_2"
+                }
+            },
+            {
+                "id": "edge_2",
+                "from": {
+                    "blockId": "block_2"
+                },
+                "to": {
+                    "groupId": "group_3"
+                }
+            },
+            {
+                "id": "edge_3",
+                "from": {
+                    "blockId": "block_3"
+                },
+                "to": {
+                    "groupId": "group_4"
+                }
+            },
+            {
+                "id": "edge_4",
+                "from": {
+                    "blockId": "block_4"
+                },
+                "to": {
+                    "groupId": "group_5"
+                }
+            },
+            {
+                "id": "edge_5",
+                "from": {
+                    "blockId": "block_5"
+                },
+                "to": {
+                    "groupId": "group_6"
+                }
+            }
+        ],
+        "variables": [
+            {
+                "id": "var_1",
+                "name": "name"
+            },
+            {
+                "id": "var_2",
+                "name": "email"
+            },
+            {
+                "id": "var_3",
+                "name": "age"
+            }
+        ]
+    }
+}

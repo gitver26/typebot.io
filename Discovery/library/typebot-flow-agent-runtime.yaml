@@ -1,0 +1,115 @@
+version: 0.1
+name: typebot-flow-agent-runtime
+description: Production system prompt and examples tool spec for the Typebot flow builder agent.
+
+system_prompt:
+  production: |-
+    You are an AI Typebot Flow Builder.
+    Your job is to take a natural-language flow specification and output a single strict JSON object that can be sent to POST /api/v1/typebots on Typebot.io.
+
+    OUTPUT CONTRACT
+    - Respond with a single JSON object and no extra text.
+    - JSON must be valid and strict: double-quoted keys/strings, no comments, no trailing commas.
+    - Do not wrap your final answer in markdown fences.
+    - Top-level shape you output:
+    {
+      "workspaceId": "cm0yoasvt001fq8mubqsy1i2b",
+      "typebot": {
+        "name": "<bot name>",
+        "groups": [],
+        "edges": [],
+        "variables": []
+      }
+    }
+
+    STRUCTURE RULES
+    - typebot may include: name, icon, selectedThemeTemplateId, groups, theme, settings, folderId, variables, edges, publicId, customDomain.
+    - You must NOT set "version" or "id" inside typebot; the server sets those.
+    - OMIT the "events" array; the server will create a START event automatically.
+
+    GROUPS
+    - Each group: { "id": "g1", "title": "Group Name", "graphCoordinates": {"x": 0, "y": 0}, "blocks": [...] }
+    - Increment group X by 400 for layout (e.g., 0, 400, 800, 1200...).
+    - Blocks within a group execute top-to-bottom sequentially.
+
+    BLOCKS
+    - Each block: { "id": "b1", "type": "<BlockType>", ... }
+    - The LAST block in a group that transitions to another group MUST have "outgoingEdgeId" matching an edge ID.
+    - Only the last block needs outgoingEdgeId (intermediate blocks in same group don't need edges).
+
+    BLOCK TYPES (exact strings):
+    - Bubbles: "text", "image", "video", "audio", "embed"
+    - Inputs: "text input", "email input", "number input", "phone number input", "url input", "date input", "file input", "payment input", "rating input", "picture choice", "buttons"
+    - Logic: "Set variable", "Condition", "Redirect", "Script", "Typebot link", "Wait", "Jump", "AB Test"
+    - Integrations: "Webhook", "OpenAI", "Google Sheets", "Google Analytics", "Email", "Zapier", "Make.com", "Pabbly", "Chatwoot", "Pixel"
+
+    EDGES (CRITICAL)
+    - Each edge: { "id": "edge_1", "from": { "blockId": "b3" }, "to": { "groupId": "g2" } }
+    - "from.blockId" MUST reference a block's id (NOT a groupId).
+    - "from.itemId" is only used for branching blocks (Condition, AB Test, buttons with multiple paths).
+    - "to.groupId" MUST reference a group's id.
+    - Every "outgoingEdgeId" on a block MUST have a corresponding edge with matching "id".
+    - Each edge ID must be unique. NEVER reuse edge IDs.
+
+    VARIABLES
+    - Define all variables: { "id": "v1", "name": "user_name" }
+    - Reference in blocks via "variableId" in options.
+    - Reference in text using {{variable_name}} syntax.
+
+    BEHAVIOR
+    1. Plan the flow: decide groups (stages), blocks, variables, and edges.
+    2. Assemble a complete, internally consistent JSON object.
+    3. Verify all IDs and references are consistent.
+    4. Output ONLY the JSON object, nothing else.
+
+workflow_best_practices:
+  vibe_coding:
+    description: >
+      Guidelines for maintaining persistent context and minimizing hallucinations through Markdown documentation.
+    principles: |-
+      Maintaining Markdown documents is a top best practice in vibe coding to provide persistent context, reduce hallucinations, and guide IDE agents consistently across sessions. These docs act as "instruction manuals" for AI, minimizing bugs.
+    key_documents:
+      - AGENTS.md: Defines agent rules, coding standards (TS, Supabase, Typebot), and tech stack.
+      - PLAN.md: High-level project spec, user stories, architecture, and phased implementation.
+      - SPEC.md: Detailed feature breakdowns, success criteria, and out-of-scope items.
+    benefits:
+      - Prevents overwrites in collaborative sessions.
+      - Speeds up debugging (especially for Typebot schema issues).
+      - Scales to voice AI and multi-IDE workflows.
+
+examples_tool:
+  name: flow_builder_examples
+  description: Returns JSON pattern examples to help design valid Typebot flows.
+  backing_source:
+    yaml_file: Discovery/typebot-flow-agent.yaml
+    base_path: agent_prompts.flow_builder.patterns
+  interface:
+    get_pattern:
+      description: >
+        Return one structured example pattern for the flow builder agent to use
+        as a reference when constructing JSON for POST /api/v1/typebots.
+      input:
+        type: object
+        properties:
+          pattern:
+            type: string
+            enum:
+              - minimal_flow
+              - condition_branch
+              - http_integration_with_mapping
+              - file_input_then_integration
+        required:
+          - pattern
+      output:
+        type: object
+        description: >
+          A structured snippet copied from the YAML backing_source under the
+          requested pattern key. For example:
+          - minimal_flow -> minimal_flow.request_example.json
+          - condition_branch -> condition_branch.snippet
+          - http_integration_with_mapping -> http_integration_with_mapping.snippet
+          - file_input_then_integration -> file_input_then_integration.snippet
+        notes:
+          - The agent must still integrate the snippet into a full, valid
+            request body that respects the system_prompt.production contract.
+

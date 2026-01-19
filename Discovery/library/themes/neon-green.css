@@ -1,0 +1,160 @@
+/* ============================================
+   NEON GREEN THEME
+   Pure Black Background with Bright Neon Green
+   ============================================ */
+
+:root {
+    /* Background - Pure black */
+    --typebot-container-bg-color: #000000 !important;
+    --typebot-container-bg-image: none !important;
+    --typebot-container-font-family: 'Roboto Mono', 'Courier New', monospace !important;
+
+    /* Chat Container */
+    --typebot-chat-container-max-width: 800px !important;
+    --typebot-chat-container-max-height: 100% !important;
+    --typebot-chat-container-bg-rgb: 0, 0, 0 !important;
+    --typebot-chat-container-opacity: 1 !important;
+    --typebot-chat-container-color: 57, 255, 20 !important;
+    /* Neon green */
+    --typebot-chat-container-border-width: 0px !important;
+    --typebot-chat-container-border-rgb: 57, 255, 20 !important;
+    --typebot-chat-container-border-opacity: 0 !important;
+    --typebot-chat-container-border-radius: 0px !important;
+    --typebot-chat-container-box-shadow: none !important;
+    --typebot-chat-container-blur: 0px !important;
+
+    /* Host Bubbles (Bot) - Minimal with neon green */
+    --typebot-host-bubble-bg-rgb: 0, 0, 0 !important;
+    --typebot-host-bubble-opacity: 0 !important;
+    --typebot-host-bubble-color: #39ff14 !important;
+    /* Bright neon green */
+    --typebot-host-bubble-border-width: 0px !important;
+    --typebot-host-bubble-border-rgb: 57, 255, 20 !important;
+    --typebot-host-bubble-border-opacity: 0 !important;
+    --typebot-host-bubble-border-radius: 0px !important;
+    --typebot-host-bubble-box-shadow: none !important;
+    --typebot-host-bubble-blur: 0px !important;
+
+    /* Guest Bubbles (User) - Same neon green */
+    --typebot-guest-bubble-bg-rgb: 0, 0, 0 !important;
+    --typebot-guest-bubble-opacity: 0 !important;
+    --typebot-guest-bubble-color: #39ff14 !important;
+    --typebot-guest-bubble-border-width: 0px !important;
+    --typebot-guest-bubble-border-rgb: 57, 255, 20 !important;
+    --typebot-guest-bubble-border-opacity: 0 !important;
+    --typebot-guest-bubble-border-radius: 0px !important;
+    --typebot-guest-bubble-box-shadow: none !important;
+    --typebot-guest-bubble-blur: 0px !important;
+
+    /* Input Fields */
+    --typebot-input-bg-rgb: 0, 0, 0 !important;
+    --typebot-input-opacity: 1 !important;
+    --typebot-input-color: #39ff14 !important;
+    --typebot-input-placeholder-color: #0a4d02 !important;
+    --typebot-input-border-width: 1px !important;
+    --typebot-input-border-rgb: 57, 255, 20 !important;
+    --typebot-input-border-opacity: 0.3 !important;
+    --typebot-input-border-radius: 0px !important;
+    --typebot-input-box-shadow: none !important;
+    --typebot-input-blur: 0px !important;
+
+    /* Buttons */
+    --typebot-button-bg-rgb: 10, 60, 5 !important;
+    --typebot-button-opacity: 0.5 !important;
+    --typebot-button-color: #39ff14 !important;
+    --typebot-button-border-width: 1px !important;
+    --typebot-button-border-rgb: 57, 255, 20 !important;
+    --typebot-button-border-opacity: 0.6 !important;
+    --typebot-button-border-radius: 0px !important;
+    --typebot-button-box-shadow: none !important;
+    --typebot-button-blur: 0px !important;
+    --typebot-buttons-input-flex-direction: row !important;
+
+    /* Checkbox */
+    --typebot-checkbox-bg-rgb: 0, 0, 0 !important;
+    --selectable-alpha-ratio: 1 !important;
+
+    /* Progress Bar */
+    --typebot-progress-bar-position: fixed !important;
+    --typebot-progress-bar-color: #39ff14 !important;
+    --typebot-progress-bar-bg-rgb: 10, 40, 5 !important;
+    --typebot-progress-bar-height: 2px !important;
+    --typebot-progress-bar-top: 0 !important;
+    --typebot-progress-bar-bottom: auto !important;
+}
+
+/* ============================================
+   NEON GLOW EFFECTS
+   ============================================ */
+
+.typebot-chat-view,
+.typebot-host-bubble,
+.typebot-guest-bubble,
+.text-input,
+.typebot-button {
+    font-family: 'Roboto Mono', 'Courier New', monospace !important;
+}
+
+/* Subtle neon glow on all text */
+.typebot-host-bubble,
+.typebot-guest-bubble,
+.text-input,
+.typebot-button {
+    text-shadow:
+        0 0 10px rgba(57, 255, 20, 0.8),
+        0 0 20px rgba(57, 255, 20, 0.4) !important;
+}
+
+/* Button hover effect */
+.typebot-button:hover {
+    background-color: rgba(20, 100, 10, 0.7) !important;
+    border-color: rgba(57, 255, 20, 1) !important;
+    text-shadow:
+        0 0 15px rgba(57, 255, 20, 1),
+        0 0 30px rgba(57, 255, 20, 0.6) !important;
+}
+
+.typebot-button:active {
+    background-color: rgba(30, 130, 15, 0.9) !important;
+}
+
+/* Selectable items */
+.typebot-selectable {
+    border-width: 1px !important;
+    border-color: rgba(57, 255, 20, 0.3) !important;
+}
+
+.typebot-selectable:hover {
+    background-color: rgba(10, 50, 5, 0.3) !important;
+    border-color: rgba(57, 255, 20, 0.7) !important;
+    text-shadow: 0 0 15px rgba(57, 255, 20, 0.9) !important;
+}
+
+.typebot-selectable.selected {
+    background-color: rgba(15, 70, 8, 0.5) !important;
+    border-color: rgba(57, 255, 20, 1) !important;
+    text-shadow: 0 0 20px rgba(57, 255, 20, 1) !important;
+}
+
+/* Input focus */
+.typebot-input:focus {
+    outline: none !important;
+    border-color: rgba(57, 255, 20, 0.8) !important;
+    text-shadow: 0 0 15px rgba(57, 255, 20, 0.7) !important;
+}
+
+/* Typing indicator */
+.bubble1,
+.bubble2,
+.bubble3 {
+    background-color: #39ff14 !important;
+    box-shadow: 0 0 10px rgba(57, 255, 20, 0.8) !important;
+}
+
+/* Remove bubble backgrounds */
+.typebot-host-bubble>.bubble-typing,
+.typebot-guest-bubble {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}

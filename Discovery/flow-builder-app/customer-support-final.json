@@ -1,0 +1,207 @@
+{
+    "workspaceId": "cm0yoasvt001fq8mubqsy1i2b",
+    "typebot": {
+        "name": "Customer Support Bot - Working",
+        "groups": [
+            {
+                "id": "g1",
+                "title": "Welcome",
+                "graphCoordinates": {
+                    "x": 0,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b1",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "👋 Welcome to Customer Support!"
+                                        }
+                                    ]
+                                }
+                            ]
+                        },
+                        "outgoingEdgeId": "e1"
+                    }
+                ]
+            },
+            {
+                "id": "g2",
+                "title": "Name",
+                "graphCoordinates": {
+                    "x": 400,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b2",
+                        "type": "text input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "Your name..."
+                            },
+                            "variableId": "v1"
+                        },
+                        "outgoingEdgeId": "e2"
+                    }
+                ]
+            },
+            {
+                "id": "g3",
+                "title": "Email",
+                "graphCoordinates": {
+                    "x": 800,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b3",
+                        "type": "email input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "your@email.com"
+                            },
+                            "variableId": "v2"
+                        },
+                        "outgoingEdgeId": "e3"
+                    }
+                ]
+            },
+            {
+                "id": "g4",
+                "title": "Age",
+                "graphCoordinates": {
+                    "x": 1200,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b4",
+                        "type": "number input",
+                        "options": {
+                            "labels": {
+                                "placeholder": "Your age..."
+                            },
+                            "variableId": "v3"
+                        },
+                        "outgoingEdgeId": "e4"
+                    }
+                ]
+            },
+            {
+                "id": "g5",
+                "title": "Send Data",
+                "graphCoordinates": {
+                    "x": 1600,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b5",
+                        "type": "Webhook",
+                        "options": {
+                            "webhook": {
+                                "method": "POST",
+                                "url": "https://webhook.site/fbe616fe-1a4f-4433-b234-9a774ba43b8e",
+                                "body": "{\"name\":\"{{v1}}\",\"email\":\"{{v2}}\",\"age\":\"{{v3}}\"}"
+                            }
+                        },
+                        "outgoingEdgeId": "e5"
+                    }
+                ]
+            },
+            {
+                "id": "g6",
+                "title": "Done",
+                "graphCoordinates": {
+                    "x": 2000,
+                    "y": 0
+                },
+                "blocks": [
+                    {
+                        "id": "b6",
+                        "type": "text",
+                        "content": {
+                            "richText": [
+                                {
+                                    "type": "p",
+                                    "children": [
+                                        {
+                                            "text": "✅ Thank you! Data submitted successfully!"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ],
+        "edges": [
+            {
+                "id": "e1",
+                "from": {
+                    "blockId": "b1"
+                },
+                "to": {
+                    "groupId": "g2"
+                }
+            },
+            {
+                "id": "e2",
+                "from": {
+                    "blockId": "b2"
+                },
+                "to": {
+                    "groupId": "g3"
+                }
+            },
+            {
+                "id": "e3",
+                "from": {
+                    "blockId": "b3"
+                },
+                "to": {
+                    "groupId": "g4"
+                }
+            },
+            {
+                "id": "e4",
+                "from": {
+                    "blockId": "b4"
+                },
+                "to": {
+                    "groupId": "g5"
+                }
+            },
+            {
+                "id": "e5",
+                "from": {
+                    "blockId": "b5"
+                },
+                "to": {
+                    "groupId": "g6"
+                }
+            }
+        ],
+        "variables": [
+            {
+                "id": "v1",
+                "name": "name"
+            },
+            {
+                "id": "v2",
+                "name": "email"
+            },
+            {
+                "id": "v3",
+                "name": "age"
+            }
+        ]
+    }
+}
